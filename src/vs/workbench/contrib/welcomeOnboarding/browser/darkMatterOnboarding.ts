@@ -73,8 +73,9 @@ export class DarkMatterOnboarding extends Disposable implements IOnboardingServi
 			.dm-onboard-card {
 				background: #0d0d0d; border: 1px solid rgba(148,163,184,0.1);
 				border-radius: 20px; width: 500px; max-width: 90vw;
+				max-height: 90vh; overflow-y: auto; overflow-x: hidden;
 				box-shadow: 0 25px 80px rgba(0,0,0,0.6);
-				overflow: hidden; transform: translateY(20px) scale(0.95);
+				transform: translateY(20px) scale(0.95);
 				transition: transform 0.3s ease;
 			}
 			.dm-onboard-overlay.visible .dm-onboard-card { transform: translateY(0) scale(1); }
@@ -100,7 +101,7 @@ export class DarkMatterOnboarding extends Disposable implements IOnboardingServi
 				-webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
 			}
 			.dm-onboard-subtitle {
-				font-size: 14px; color: #6b7280; margin: 0 0 4px; line-height: 1.5;
+				font-size: 14px; color: #6b7280; margin: 0 0 4px; line-height: 1.6;
 			}
 			.dm-onboard-body { padding: 24px 40px; }
 			.dm-onboard-label {
@@ -217,7 +218,7 @@ export class DarkMatterOnboarding extends Disposable implements IOnboardingServi
 		const title = append(header, $('h2.dm-onboard-title'));
 		title.textContent = 'Welcome to Dark Matter';
 		const subtitle = append(header, $('p.dm-onboard-subtitle'));
-		subtitle.textContent = 'Your AI-powered code editor.\nLet\'s connect to your local Ollama server to enable AI features.';
+		subtitle.innerHTML = 'Your AI-powered code editor.<br>Let\u2019s connect to your local Ollama server to enable AI features.';
 
 		const body = append(this.card!, $('div.dm-onboard-body'));
 		const features = [
@@ -400,7 +401,7 @@ export class DarkMatterOnboarding extends Disposable implements IOnboardingServi
 		const title = append(header, $('h2.dm-onboard-title'));
 		title.textContent = 'You\'re All Set!';
 		const subtitle = append(header, $('p.dm-onboard-subtitle'));
-		subtitle.textContent = `Connected to ${this.serverUrl}\nUsing model: ${this.selectedModel || 'default'}`;
+		subtitle.innerHTML = `Connected to <strong style="color:#d1d5db">${this.serverUrl}</strong><br>Using model: <strong style="color:#d1d5db">${this.selectedModel || 'default'}</strong>`;
 
 		const body = append(this.card!, $('div.dm-onboard-body'));
 		const tip = append(body, $('div'));
