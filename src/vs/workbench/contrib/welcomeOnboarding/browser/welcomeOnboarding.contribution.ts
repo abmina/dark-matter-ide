@@ -10,9 +10,41 @@ import { InstantiationType, registerSingleton } from '../../../../platform/insta
 import { ServicesAccessor } from '../../../../platform/instantiation/common/instantiation.js';
 import { IOnboardingService } from '../common/onboardingService.js';
 import { DarkMatterOnboarding } from './darkMatterOnboarding.js';
+import { IWorkbenchContribution, registerWorkbenchContribution2 } from '../../../common/contributions.js';
+import { WorkbenchPhase } from '../../../services/lifecycle/browser/workbenchLifecycleService.js';
+import { Disposable } from '../../../../base/common/lifecycle.js';
+import { IStorageService, StorageScope } from '../../../../platform/storage/common/storage.js';
+import { ONBOARDING_STORAGE_KEY } from '../common/onboardingTypes.js';
 
 registerSingleton(IOnboardingService, DarkMatterOnboarding, InstantiationType.Delayed);
 
+// ── Auto-show onboarding on first launch ──────────────────────────────
+class DarkMatterOnboardingTrigger extends Disposable implements IWorkbenchContribution {
+	static readonly ID = 'workbench.contrib.darkMatterOnboardingTrigger';
+
+	constructor(
+		@IOnboardingService private readonly onboardingService: IOnboardingService,
+		@IStorageService private readonly storageService: IStorageService,
+	) {
+		super();
+
+		// Only show on first launch (not yet dismissed)
+		if (!this.storageService.get(ONBOARDING_STORAGE_KEY, StorageScope.PROFILE)) {
+			// Small delay to let the workbench fully render
+			setTimeout(() => {
+				this.onboardingService.show();
+			}, 500);
+		}
+	}
+}
+
+registerWorkbenchContribution2(
+	DarkMatterOnboardingTrigger.ID,
+	DarkMatterOnboardingTrigger,
+	WorkbenchPhase.AfterRestored
+);
+
+// ── Command palette action ────────────────────────────────────────────
 registerAction2(class extends Action2 {
 	constructor() {
 		super({
