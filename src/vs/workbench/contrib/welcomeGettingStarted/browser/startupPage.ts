@@ -235,17 +235,9 @@ export class StartupPageRunnerContribution extends Disposable implements IWorkbe
 	}
 
 	private tryShowOnboarding(): void {
-		if (this.storageService.get(ONBOARDING_STORAGE_KEY, StorageScope.PROFILE)) {
-			return; // onboarding already completed
-		}
-
-		// Show the onboarding overlay on top of the welcome page
-		this.onboardingService.show();
-
-		// Mark onboarding as completed when dismissed
-		this._register(this.onboardingService.onDidDismiss(() => {
-			this.storageService.store(ONBOARDING_STORAGE_KEY, true, StorageScope.PROFILE, StorageTarget.USER);
-		}));
+		// Dark Matter: skip the default VS Code onboarding wizard
+		// (GitHub sign-in, telemetry notice, etc.) — we use our own welcome page
+		return;
 	}
 }
 

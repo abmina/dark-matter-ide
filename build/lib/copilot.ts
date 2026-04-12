@@ -130,7 +130,8 @@ export function prepareBuiltInCopilotExtensionShims(platform: string, arch: stri
 	const copilotBase = path.join(extensionNodeModules, '@github', 'copilot');
 	const copilotSdkBase = path.join(copilotBase, 'sdk');
 	if (!fs.existsSync(copilotSdkBase)) {
-		throw new Error(`[prepareBuiltInCopilotExtensionShims] Copilot SDK directory not found at ${copilotSdkBase}`);
+		console.warn(`[prepareBuiltInCopilotExtensionShims] Copilot SDK directory not found at ${copilotSdkBase}, skipping`);
+		return;
 	}
 
 	const nodePtySource = path.join(appNodeModulesDir, 'node-pty', 'build', 'Release');

@@ -5,7 +5,7 @@
 	"dataFolderName": ".dark-matter",
 	"win32MutexName": "darkmatter",
 	"licenseName": "MIT",
-	"quality": "stable",
+	"quality": "oss",
 	"licenseUrl": "https://github.com/microsoft/vscode/blob/main/LICENSE.txt",
 	"serverLicenseUrl": "https://github.com/microsoft/vscode/blob/main/LICENSE.txt",
 	"serverGreeting": [],
@@ -264,5 +264,8 @@
 			"type": "light"
 		}
 	],
-	"builtInExtensionsEnabledWithAutoUpdates": []
+	"builtInExtensionsEnabledWithAutoUpdates": [],
+	"version": "1.0.0",
+	"commit": "362fd8aba94229d61940b2cab05040d7da361412",
+	"date": "2026-04-12T21:53:35.664Z"
 }
