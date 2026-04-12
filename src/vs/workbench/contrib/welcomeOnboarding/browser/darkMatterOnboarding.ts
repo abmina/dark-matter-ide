@@ -62,9 +62,9 @@ export class DarkMatterOnboarding extends Disposable implements IOnboardingServi
 		}
 
 		this.logService.info('[Dark Matter Onboarding] show() called');
-		const container = this.layoutService.activeContainer || getActiveWindow().document.body;
+		const container = getActiveWindow().document.body;
 		if (!container) {
-			this.logService.error('[Dark Matter Onboarding] No container found for onboarding!');
+			this.logService.error('[Dark Matter Onboarding] No document body found for onboarding!');
 			return;
 		}
 
@@ -72,22 +72,22 @@ export class DarkMatterOnboarding extends Disposable implements IOnboardingServi
 		const style = document.createElement('style');
 		style.textContent = `
 			.dm-onboard-overlay {
-				position: absolute; inset: 0; z-index: 10001;
+				position: fixed; inset: 0; z-index: 999999;
 				display: flex; align-items: center; justify-content: center;
-				background: rgba(0,0,0,0.75); backdrop-filter: blur(12px);
-				opacity: 0; transition: opacity 0.3s ease;
+				background: rgba(0,0,0,0.8); backdrop-filter: blur(16px);
+				opacity: 0; transition: opacity 0.4s ease;
 				font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-				pointer-events: auto;
+				pointer-events: all;
 			}
 			.dm-onboard-overlay.visible { opacity: 1; }
 			.dm-onboard-card {
-				background: #0d0d0d; border: 1px solid rgba(148,163,184,0.1);
+				background: #0d0d0d; border: 1px solid rgba(148,163,184,0.15);
 				border-radius: 20px; width: 500px; max-width: 90vw;
 				max-height: 90vh; overflow-y: auto; overflow-x: hidden;
-				box-shadow: 0 25px 80px rgba(0,0,0,0.6);
-				transform: translateY(20px) scale(0.95);
-				transition: transform 0.3s ease;
-				pointer-events: auto;
+				box-shadow: 0 40px 100px rgba(0,0,0,0.8);
+				transform: translateY(30px) scale(0.92);
+				transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+				pointer-events: all !important;
 			}
 			.dm-onboard-overlay.visible .dm-onboard-card { transform: translateY(0) scale(1); }
 			.dm-onboard-header {
@@ -255,12 +255,16 @@ export class DarkMatterOnboarding extends Disposable implements IOnboardingServi
 		const skipBtn = append(footer, $<HTMLButtonElement>('button.dm-onboard-btn.dm-onboard-btn-ghost'));
 		skipBtn.textContent = 'Skip';
 		skipBtn.type = 'button';
-		this.disposables.add(addDisposableListener(skipBtn, EventType.CLICK, () => this._dismiss()));
+		this.disposables.add(addDisposableListener(skipBtn, EventType.CLICK, () => {
+			console.log('[Dark Matter Onboarding] Skip clicked');
+			this._dismiss();
+		}));
 
 		const nextBtn = append(footer, $<HTMLButtonElement>('button.dm-onboard-btn.dm-onboard-btn-primary'));
 		nextBtn.textContent = 'Get Started';
 		nextBtn.type = 'button';
 		this.disposables.add(addDisposableListener(nextBtn, EventType.CLICK, () => {
+			console.log('[Dark Matter Onboarding] Get Started clicked');
 			this.currentStep = 1;
 			this._renderStep();
 		}));

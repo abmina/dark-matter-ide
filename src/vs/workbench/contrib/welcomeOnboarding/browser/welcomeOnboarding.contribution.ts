@@ -32,9 +32,21 @@ class DarkMatterOnboardingTrigger extends Disposable implements IWorkbenchContri
 
 		// Only show on first launch (not yet dismissed)
 		if (!this.storageService.get(ONBOARDING_STORAGE_KEY, StorageScope.PROFILE)) {
-			// Wait until the workbench is fully stable
-			this.lifecycleService.when(LifecyclePhase.Eventually).then(() => {
-				this.onboardingService.show();
+			// Persistent retry logic: attempt to show every 2 seconds until successful or dismissed
+			this.lifecycleService.when(LifecyclePhase.Restored).then(() => {
+				const interval = setInterval(() => {
+					// Stop if already dismissed or showing
+					if (this.storageService.get(ONBOARDING_STORAGE_KEY, StorageScope.PROFILE) || (this.onboardingService as any).isShowing) {
+						clearInterval(interval);
+						return;
+					}
+
+					console.log('[Dark Matter] Attempting automatic onboarding trigger...');
+					this.onboardingService.show();
+				}, 2000);
+
+				// Fallback safety: stop after 30 seconds
+				setTimeout(() => clearInterval(interval), 30000);
 			});
 		}
 	}
