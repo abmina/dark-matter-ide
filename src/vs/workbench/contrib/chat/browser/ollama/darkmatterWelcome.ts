@@ -62,14 +62,14 @@ export class DarkMatterWelcomeContribution extends Disposable implements IWorkbe
 				{ id: 'continue', label: '$(rocket) Get Started', detail: 'Configure your AI server and default model' },
 				{ id: 'skip', label: '$(debug-step-over) Skip Setup', detail: 'Use default settings (localhost:11434, llama3.1)' },
 			],
-			{ title: '🚀 Welcome to Dark Matter!', placeHolder: 'Dark Matter is an AI-powered IDE. Let\'s connect to your Ollama server.' }
+			{ title: 'Welcome to Dark Matter!', placeHolder: 'Dark Matter is an AI-powered IDE. Let\'s connect to your Ollama server.' }
 		);
 
 		if (!welcome || welcome.id === 'skip') { this.markSetupComplete(); return; }
 
 		const currentUrl = this.configurationService.getValue<string>('ollamaAgent.baseUrl') || 'http://127.0.0.1:11434';
 		const serverUrl = await this.quickInputService.input({
-			title: '🔗 Step 1/2: Ollama Server URL', value: currentUrl,
+			title: 'Step 1/2: Ollama Server URL', value: currentUrl,
 			prompt: 'Enter the URL of your Ollama server.',
 			validateInput: async (v) => { try { new URL(v); return undefined; } catch { return 'Invalid URL'; } },
 		});
@@ -87,7 +87,7 @@ export class DarkMatterWelcomeContribution extends Disposable implements IWorkbe
 		if (models.length === 0) {
 			await this.quickInputService.pick(
 				[{ id: 'ok', label: '$(warning) Could not connect', detail: `Configure later from "Dark Matter - Settings".` }],
-				{ title: '⚠️ Connection Failed' }
+				{ title: 'Connection Failed' }
 			);
 			this.markSetupComplete(); return;
 		}
@@ -101,7 +101,7 @@ export class DarkMatterWelcomeContribution extends Disposable implements IWorkbe
 		}));
 
 		const sel = await this.quickInputService.pick(modelItems, {
-			title: `🤖 Step 2/2: Choose Default Model`, placeHolder: 'Select default model',
+			title: 'Step 2/2: Choose Default Model', placeHolder: 'Select default model',
 		});
 
 		if (sel?.id && sel.id !== currentModel) { await this.configurationService.updateValue('ollamaAgent.model', sel.id); }
