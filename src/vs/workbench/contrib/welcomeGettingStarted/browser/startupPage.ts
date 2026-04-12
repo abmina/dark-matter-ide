@@ -235,9 +235,17 @@ export class StartupPageRunnerContribution extends Disposable implements IWorkbe
 	}
 
 	private tryShowOnboarding(): void {
-		// Dark Matter: skip the default VS Code onboarding wizard
-		// (GitHub sign-in, telemetry notice, etc.) — we use our own welcome page
-		return;
+		if (this.storageService.get(ONBOARDING_STORAGE_KEY, StorageScope.PROFILE)) {
+			return; // onboarding already completed
+		}
+
+		// Show the Dark Matter Ollama setup overlay
+		this.onboardingService.show();
+
+		// Mark onboarding as completed when dismissed
+		this._register(this.onboardingService.onDidDismiss(() => {
+			this.storageService.store(ONBOARDING_STORAGE_KEY, true, StorageScope.PROFILE, StorageTarget.USER);
+		}));
 	}
 }
 

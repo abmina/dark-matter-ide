@@ -63,7 +63,11 @@ export class EditorGroupWatermark extends Disposable {
 			.dm-watermark .dm-content { position: relative; z-index: 1; text-align: center; max-width: 480px; width: 100%; padding: 40px; }
 			.dm-watermark .dm-logo { width: 100px; height: 100px; border-radius: 24px; margin-bottom: 28px;
 				filter: drop-shadow(0 8px 32px rgba(148,163,184,0.3)); animation: dmfloat 3s ease-in-out infinite; }
-			.dm-watermark .dm-logo-ph { font-size: 72px; margin-bottom: 28px; animation: dmfloat 3s ease-in-out infinite; }
+			.dm-watermark .dm-logo-ph { font-size: 36px; font-weight: 800; letter-spacing: 4px; margin-bottom: 28px;
+				width: 90px; height: 90px; border-radius: 22px; display: flex; align-items: center; justify-content: center;
+				background: rgba(255,255,255,0.03); border: 1px solid rgba(148,163,184,0.2);
+				background-clip: padding-box; color: #cbd5e1;
+				box-shadow: 0 0 40px rgba(148,163,184,0.1); }
 			.dm-watermark h1 { font-size: 38px; font-weight: 700; margin: 0 0 6px; padding: 4px 0; letter-spacing: -1px; line-height: 1.2;
 				background: linear-gradient(135deg, #f8fafc 0%, #cbd5e1 50%, #94a3b8 100%);
 				-webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
@@ -108,7 +112,7 @@ export class EditorGroupWatermark extends Disposable {
 			content.appendChild(logo);
 		} else {
 			const ph = $('div.dm-logo-ph');
-			ph.textContent = '🌌';
+			ph.textContent = 'DM';
 			content.appendChild(ph);
 		}
 
