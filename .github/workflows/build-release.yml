@@ -28,6 +28,16 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Stamp version and commit into product.json
+        shell: pwsh
+        run: |
+          $product = Get-Content product.json | ConvertFrom-Json
+          $product | Add-Member -Force -Name 'version' -Value '${{ github.ref_name }}'.TrimStart('v') -MemberType NoteProperty
+          $product | Add-Member -Force -Name 'commit' -Value '${{ github.sha }}' -MemberType NoteProperty
+          $product | Add-Member -Force -Name 'date' -Value (Get-Date -Format 'yyyy-MM-ddTHH:mm:ss.fffZ') -MemberType NoteProperty
+          $product | ConvertTo-Json -Depth 10 | Set-Content product.json
+          Write-Output "Stamped version=$($product.version) commit=$($product.commit)"
+
       - name: Install dependencies
         run: npm install
 
@@ -69,6 +79,17 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libx11-dev libxkbfile-dev libsecret-1-dev rpm fakeroot dpkg
+
+      - name: Stamp version and commit into product.json
+        run: |
+          VERSION="${{ github.ref_name }}"
+          VERSION="${VERSION#v}"
+          COMMIT="${{ github.sha }}"
+          DATE=$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")
+          tmp=$(mktemp)
+          jq --arg v "$VERSION" --arg c "$COMMIT" --arg d "$DATE" \
+            '. + {version: $v, commit: $c, date: $d}' product.json > "$tmp" && mv "$tmp" product.json
+          echo "Stamped version=$VERSION commit=$COMMIT"
 
       - name: Install dependencies
         run: npm install
@@ -137,8 +158,8 @@ jobs:
             **AI-Powered Code Editor with Built-in Ollama Integration**
 
             ### Downloads
-            - 🪟 **Windows**: `DarkMatter-win32-x64.zip` — Extract and run `Code - OSS.exe`
-            - 🐧 **Linux**: `DarkMatter-linux-x64.tar.gz` — Extract and run `./code-oss`
+            - 🪟 **Windows**: `DarkMatter-win32-x64.zip` — Extract and run `Dark Matter.exe`
+            - 🐧 **Linux**: `DarkMatter-linux-x64.tar.gz` — Extract and run `./dark-matter`
 
             ### Prerequisites
             - Install [Ollama](https://ollama.com/download) and pull a model: `ollama pull gemma3:4b`
@@ -148,6 +169,10 @@ jobs:
             - Built-in Ollama AI chat agent
             - Custom Dark Matter welcome page
             - Privacy-first: all AI runs locally on your hardware
+
+            ### Version Info
+            - **Version**: ${{ github.ref_name }}
+            - **Commit**: ${{ github.sha }}
           files: ./release/*
           draft: false
           prerelease: false
