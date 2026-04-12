@@ -1,6 +1,6 @@
 /*---------------------------------------------------------------------------------------------
- *  Dark Matter - Editor Group Watermark
- *  Replaces the default VS Code watermark with Dark Matter branding.
+ *  Copyright (c) Dark Matter IDE Contributors. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
 import { $, append, addDisposableListener } from '../../../../base/browser/dom.js';
