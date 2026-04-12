@@ -98,9 +98,12 @@ export class StartupPageRunnerContribution extends Disposable implements IWorkbe
 		super();
 
 		// Show Dark Matter onboarding overlay on first launch
-		if (!this.environmentService.skipWelcome) {
+		this.tryShowOnboarding();
+
+		// Fallback: also try after workbench is fully restored
+		this.lifecycleService.when(LifecyclePhase.Restored).then(() => {
 			this.tryShowOnboarding();
-		}
+		});
 
 		this.run().then(undefined, onUnexpectedError);
 		this._register(this.editorService.onDidCloseEditor((e) => {

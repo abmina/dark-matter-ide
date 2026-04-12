@@ -46,16 +46,20 @@ export class DarkMatterOnboarding extends Disposable implements IOnboardingServi
 		super();
 		this.serverUrl = this.configurationService.getValue<string>('ollamaAgent.baseUrl') || 'http://127.0.0.1:11434';
 		this.selectedModel = this.configurationService.getValue<string>('ollamaAgent.model') || 'llama3.1';
-		try {
-			this.logoUrl = FileAccess.asBrowserUri('vs/workbench/browser/media/darkmatter-icon.png').toString(true);
-		} catch (err) {
-			this.logService.warn(`[Dark Matter Onboarding] Logo URL error: ${err}`);
-		}
 	}
 
 	show(): void {
 		if (this.overlay) { return; }
 		this._isShowing = true;
+
+		// Resolve logo URL lazily
+		if (!this.logoUrl) {
+			try {
+				this.logoUrl = FileAccess.asBrowserUri('vs/workbench/browser/media/darkmatter-icon.png').toString(true);
+			} catch (err) {
+				this.logService.warn(`[Dark Matter Onboarding] Logo URL error: ${err}`);
+			}
+		}
 
 		const container = this.layoutService.activeContainer;
 
