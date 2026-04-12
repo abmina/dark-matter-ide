@@ -486,6 +486,12 @@ function packageTask(platform: string, arch: string, sourceFolderName: string, d
 		}
 		let all = es.merge(...mergeStreams);
 
+		// Dark Matter logo — copy source media to the bundled output path
+		all = es.merge(all,
+			gulp.src('src/vs/workbench/browser/media/darkmatter-icon.png', { base: 'src' })
+				.pipe(rename(p => { p.dirname = `out/${p.dirname}`; }))
+		);
+
 		if (platform === 'win32') {
 			all = es.merge(all, gulp.src([
 				'resources/win32/bower.ico',
