@@ -24,7 +24,9 @@ Dark Matter ships with a **fully integrated Ollama chat agent** — no extension
 ### 🌐 Remote Ollama Server
 Don't want to run AI models on your local machine? Dark Matter can connect to a **remote Ollama server** — perfect for teams sharing a powerful GPU server, or offloading inference to a dedicated machine.
 
-To configure a remote server, go to **Settings** and update:
+To configure a remote server, simply click **"Dark Matter - Settings"** in the bottom-right of the status bar — it lets you set the server URL, select a model, and test the connection all from one place.
+
+You can also set it manually in **Settings**:
 
 ```json
 {
