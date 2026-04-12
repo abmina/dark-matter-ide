@@ -12,8 +12,11 @@ import { $, append, addDisposableListener, EventType, getActiveWindow, clearNode
 import { StandardKeyboardEvent } from '../../../../base/browser/keyboardEvent.js';
 import { KeyCode } from '../../../../base/common/keyCodes.js';
 import { DisposableStore } from '../../../../base/common/lifecycle.js';
-import { INotificationService, Severity } from '../../../../platform/notification/common/notification.js';
-import { IQuickPickItem } from '../../../../platform/quickinput/common/quickInput.js';
+import { INotificationService } from '../../../../platform/notification/common/notification.js';
+import { IFileService } from '../../../../platform/files/common/files.js';
+import { URI } from '../../../../base/common/uri.js';
+import { FileAccess } from '../../../../base/common/network.js';
+import { ILogService } from '../../../../platform/log/common/log.js';
 
 export class DarkMatterOnboarding extends Disposable implements IOnboardingService {
 	declare readonly _serviceBrand: undefined;
@@ -29,6 +32,7 @@ export class DarkMatterOnboarding extends Disposable implements IOnboardingServi
 
 	private currentStep = 0;
 	private serverUrl = '';
+	private logoBase64 = '';
 	private selectedModel = '';
 	private models: { name: string; size: number }[] = [];
 
@@ -39,10 +43,29 @@ export class DarkMatterOnboarding extends Disposable implements IOnboardingServi
 		@ILayoutService private readonly layoutService: ILayoutService,
 		@IConfigurationService private readonly configurationService: IConfigurationService,
 		@INotificationService private readonly notificationService: INotificationService,
+		@IFileService private readonly fileService: IFileService,
+		@ILogService private readonly logService: ILogService,
 	) {
 		super();
 		this.serverUrl = this.configurationService.getValue<string>('ollamaAgent.baseUrl') || 'http://127.0.0.1:11434';
 		this.selectedModel = this.configurationService.getValue<string>('ollamaAgent.model') || 'llama3.1';
+		this._loadLogo();
+	}
+
+	private async _loadLogo(): Promise<void> {
+		try {
+			const baseUri = FileAccess.asFileUri('');
+			const logoUri = URI.joinPath(baseUri, '..', 'resources', 'darkmatter-1024.png');
+			const logoData = await this.fileService.readFile(logoUri);
+			const bytes = new Uint8Array(logoData.value.buffer);
+			let binary = '';
+			for (let i = 0; i < bytes.length; i++) {
+				binary += String.fromCharCode(bytes[i]);
+			}
+			this.logoBase64 = btoa(binary);
+		} catch (err) {
+			this.logService.warn(`[Dark Matter Onboarding] Logo load error: ${err}`);
+		}
 	}
 
 	show(): void {
@@ -73,11 +96,18 @@ export class DarkMatterOnboarding extends Disposable implements IOnboardingServi
 			.dm-onboard-header {
 				padding: 40px 40px 0; text-align: center;
 			}
+			@keyframes dm-ob-float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
 			.dm-onboard-logo {
-				width: 64px; height: 64px; border-radius: 16px; margin: 0 auto 20px;
+				width: 72px; height: 72px; border-radius: 18px; margin: 0 auto 20px;
 				background: rgba(148,163,184,0.08); border: 1px solid rgba(148,163,184,0.15);
 				display: flex; align-items: center; justify-content: center;
 				font-size: 24px; font-weight: 800; color: #cbd5e1; letter-spacing: 2px;
+				animation: dm-ob-float 3s ease-in-out infinite;
+				box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+				overflow: hidden;
+			}
+			.dm-onboard-logo img {
+				width: 100%; height: 100%; object-fit: cover; border-radius: 18px;
 			}
 			.dm-onboard-title {
 				font-size: 24px; font-weight: 700; color: #f1f5f9; margin: 0 0 8px;
@@ -195,7 +225,7 @@ export class DarkMatterOnboarding extends Disposable implements IOnboardingServi
 	private _renderWelcomeStep(): void {
 		const header = append(this.card!, $('div.dm-onboard-header'));
 		const logo = append(header, $('div.dm-onboard-logo'));
-		logo.textContent = 'DM';
+		this._renderLogo(logo);
 		const title = append(header, $('h2.dm-onboard-title'));
 		title.textContent = 'Welcome to Dark Matter';
 		const subtitle = append(header, $('p.dm-onboard-subtitle'));
@@ -378,9 +408,7 @@ export class DarkMatterOnboarding extends Disposable implements IOnboardingServi
 	private _renderDoneStep(): void {
 		const header = append(this.card!, $('div.dm-onboard-header'));
 		const logo = append(header, $('div.dm-onboard-logo'));
-		logo.textContent = '✓';
-		logo.style.color = '#34d399';
-		logo.style.fontSize = '32px';
+		this._renderLogo(logo);
 		const title = append(header, $('h2.dm-onboard-title'));
 		title.textContent = 'You\'re All Set!';
 		const subtitle = append(header, $('p.dm-onboard-subtitle'));
@@ -398,5 +426,16 @@ export class DarkMatterOnboarding extends Disposable implements IOnboardingServi
 		doneBtn.type = 'button';
 		doneBtn.style.padding = '12px 48px';
 		this.disposables.add(addDisposableListener(doneBtn, EventType.CLICK, () => this._dismiss()));
+	}
+
+	private _renderLogo(container: HTMLElement): void {
+		if (this.logoBase64) {
+			const img = document.createElement('img');
+			img.src = `data:image/png;base64,${this.logoBase64}`;
+			img.alt = 'Dark Matter';
+			container.appendChild(img);
+		} else {
+			container.textContent = 'DM';
+		}
 	}
 }
