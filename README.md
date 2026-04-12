@@ -4,6 +4,10 @@
 
 Dark Matter is a free, open-source code editor forked from [VS Code OSS](https://github.com/microsoft/vscode), designed to bring **local AI assistance** directly into your development workflow — no cloud APIs, no subscriptions, no data leaving your machine.
 
+<p align="center">
+  <img alt="Dark Matter IDE Welcome Screen" src="docs/images/dark-matter-welcome.png" width="900">
+</p>
+
 ---
 
 ## ✨ Key Features
