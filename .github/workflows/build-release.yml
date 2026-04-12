@@ -1,0 +1,153 @@
+name: Build & Release Dark Matter IDE
+
+on:
+  push:
+    tags:
+      - 'v*'  # Trigger on version tags like v1.0.0, v1.1.0, etc.
+
+permissions:
+  contents: write  # Needed to create releases
+
+jobs:
+  # ============================================================
+  # Windows x64 Build
+  # ============================================================
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build (production minified)
+        run: npx gulp vscode-win32-x64-min
+        env:
+          NODE_OPTIONS: --max-old-space-size=8192
+
+      - name: Create ZIP archive
+        run: |
+          Compress-Archive -Path "../VSCode-win32-x64/*" -DestinationPath "../DarkMatter-win32-x64.zip"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DarkMatter-win32-x64
+          path: ../DarkMatter-win32-x64.zip
+
+  # ============================================================
+  # Linux x64 Build
+  # ============================================================
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libx11-dev libxkbfile-dev libsecret-1-dev rpm fakeroot dpkg
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build (production minified)
+        run: npx gulp vscode-linux-x64-min
+        env:
+          NODE_OPTIONS: --max-old-space-size=8192
+
+      - name: Create tar.gz archive
+        run: |
+          cd ..
+          tar -czf DarkMatter-linux-x64.tar.gz VSCode-linux-x64
+
+      - name: Build .deb package
+        run: npx gulp vscode-linux-x64-build-deb
+        continue-on-error: true
+
+      - name: Upload tar.gz artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DarkMatter-linux-x64
+          path: ../DarkMatter-linux-x64.tar.gz
+
+      - name: Upload .deb artifact
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: DarkMatter-linux-x64-deb
+          path: ../*.deb
+        continue-on-error: true
+
+  # ============================================================
+  # Create GitHub Release
+  # ============================================================
+  release:
+    needs: [build-windows, build-linux]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: DarkMatter-win32-x64
+          path: ./release
+
+      - name: Download Linux artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: DarkMatter-linux-x64
+          path: ./release
+
+      - name: Download Linux .deb artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: DarkMatter-linux-x64-deb
+          path: ./release
+        continue-on-error: true
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Dark Matter IDE ${{ github.ref_name }}
+          body: |
+            ## Dark Matter IDE ${{ github.ref_name }}
+
+            **AI-Powered Code Editor with Built-in Ollama Integration**
+
+            ### Downloads
+            - 🪟 **Windows**: `DarkMatter-win32-x64.zip` — Extract and run `Code - OSS.exe`
+            - 🐧 **Linux**: `DarkMatter-linux-x64.tar.gz` — Extract and run `./code-oss`
+
+            ### Prerequisites
+            - Install [Ollama](https://ollama.com/download) and pull a model: `ollama pull gemma3:4b`
+            - Launch Dark Matter and start chatting with AI!
+
+            ### What's New
+            - Built-in Ollama AI chat agent
+            - Custom Dark Matter welcome page
+            - Privacy-first: all AI runs locally on your hardware
+          files: ./release/*
+          draft: false
+          prerelease: false
