@@ -97,8 +97,8 @@ export class StartupPageRunnerContribution extends Disposable implements IWorkbe
 	) {
 		super();
 
-		// Show onboarding overlay immediately (before waiting for lifecycle restore)
-		if (!this.environmentService.skipWelcome && this.configurationService.getValue<boolean>('workbench.welcomePage.experimentalOnboarding')) {
+		// Show Dark Matter onboarding overlay on first launch
+		if (!this.environmentService.skipWelcome) {
 			this.tryShowOnboarding();
 		}
 
