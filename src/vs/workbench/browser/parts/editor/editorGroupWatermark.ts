@@ -6,8 +6,6 @@
 import { $, append, addDisposableListener } from '../../../../base/browser/dom.js';
 import { Disposable } from '../../../../base/common/lifecycle.js';
 import { ICommandService } from '../../../../platform/commands/common/commands.js';
-import { IFileService } from '../../../../platform/files/common/files.js';
-import { URI } from '../../../../base/common/uri.js';
 import { FileAccess } from '../../../../base/common/network.js';
 import { ILogService } from '../../../../platform/log/common/log.js';
 
@@ -16,7 +14,6 @@ export class EditorGroupWatermark extends Disposable {
 	constructor(
 		container: HTMLElement,
 		@ICommandService private readonly commandService: ICommandService,
-		@IFileService private readonly fileService: IFileService,
 		@ILogService private readonly logService: ILogService,
 	) {
 		super();
@@ -25,20 +22,12 @@ export class EditorGroupWatermark extends Disposable {
 	}
 
 	private async render(container: HTMLElement): Promise<void> {
-		// Read logo
-		let logoBase64 = '';
+		// Get logo URL from bundled media
+		let logoUrl = '';
 		try {
-			const baseUri = FileAccess.asFileUri('');
-			const logoUri = URI.joinPath(baseUri, '..', 'resources', 'darkmatter-1024.png');
-			const logoData = await this.fileService.readFile(logoUri);
-			const bytes = new Uint8Array(logoData.value.buffer);
-			let binary = '';
-			for (let i = 0; i < bytes.length; i++) {
-				binary += String.fromCharCode(bytes[i]);
-			}
-			logoBase64 = btoa(binary);
+			logoUrl = FileAccess.asBrowserUri('vs/workbench/browser/media/darkmatter-icon.png').toString(true);
 		} catch (err) {
-			this.logService.warn(`[Dark Matter] Watermark logo load error: ${err}`);
+			this.logService.warn(`[Dark Matter] Watermark logo URL error: ${err}`);
 		}
 
 		// Style tag
@@ -105,10 +94,10 @@ export class EditorGroupWatermark extends Disposable {
 		const content = $('div.dm-content');
 
 		// Logo
-		if (logoBase64) {
+		if (logoUrl) {
 			const logo = document.createElement('img');
 			logo.className = 'dm-logo';
-			logo.src = `data:image/png;base64,${logoBase64}`;
+			logo.src = logoUrl;
 			logo.alt = 'Dark Matter';
 			content.appendChild(logo);
 		} else {

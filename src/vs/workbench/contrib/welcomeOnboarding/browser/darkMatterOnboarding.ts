@@ -13,8 +13,6 @@ import { StandardKeyboardEvent } from '../../../../base/browser/keyboardEvent.js
 import { KeyCode } from '../../../../base/common/keyCodes.js';
 import { DisposableStore } from '../../../../base/common/lifecycle.js';
 import { INotificationService } from '../../../../platform/notification/common/notification.js';
-import { IFileService } from '../../../../platform/files/common/files.js';
-import { URI } from '../../../../base/common/uri.js';
 import { FileAccess } from '../../../../base/common/network.js';
 import { ILogService } from '../../../../platform/log/common/log.js';
 
@@ -32,7 +30,7 @@ export class DarkMatterOnboarding extends Disposable implements IOnboardingServi
 
 	private currentStep = 0;
 	private serverUrl = '';
-	private logoBase64 = '';
+	private logoUrl = '';
 	private selectedModel = '';
 	private models: { name: string; size: number }[] = [];
 
@@ -43,28 +41,15 @@ export class DarkMatterOnboarding extends Disposable implements IOnboardingServi
 		@ILayoutService private readonly layoutService: ILayoutService,
 		@IConfigurationService private readonly configurationService: IConfigurationService,
 		@INotificationService private readonly notificationService: INotificationService,
-		@IFileService private readonly fileService: IFileService,
 		@ILogService private readonly logService: ILogService,
 	) {
 		super();
 		this.serverUrl = this.configurationService.getValue<string>('ollamaAgent.baseUrl') || 'http://127.0.0.1:11434';
 		this.selectedModel = this.configurationService.getValue<string>('ollamaAgent.model') || 'llama3.1';
-		this._loadLogo();
-	}
-
-	private async _loadLogo(): Promise<void> {
 		try {
-			const baseUri = FileAccess.asFileUri('');
-			const logoUri = URI.joinPath(baseUri, '..', 'resources', 'darkmatter-1024.png');
-			const logoData = await this.fileService.readFile(logoUri);
-			const bytes = new Uint8Array(logoData.value.buffer);
-			let binary = '';
-			for (let i = 0; i < bytes.length; i++) {
-				binary += String.fromCharCode(bytes[i]);
-			}
-			this.logoBase64 = btoa(binary);
+			this.logoUrl = FileAccess.asBrowserUri('vs/workbench/browser/media/darkmatter-icon.png').toString(true);
 		} catch (err) {
-			this.logService.warn(`[Dark Matter Onboarding] Logo load error: ${err}`);
+			this.logService.warn(`[Dark Matter Onboarding] Logo URL error: ${err}`);
 		}
 	}
 
@@ -74,21 +59,21 @@ export class DarkMatterOnboarding extends Disposable implements IOnboardingServi
 
 		const container = this.layoutService.activeContainer;
 
-		// Inject styles
+		// Inject styles — colors matched to welcome screen (#0d0d0d, slate palette)
 		const style = document.createElement('style');
 		style.textContent = `
 			.dm-onboard-overlay {
 				position: absolute; inset: 0; z-index: 10000;
 				display: flex; align-items: center; justify-content: center;
-				background: rgba(0,0,0,0.7); backdrop-filter: blur(8px);
+				background: rgba(0,0,0,0.75); backdrop-filter: blur(12px);
 				opacity: 0; transition: opacity 0.3s ease;
 				font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 			}
 			.dm-onboard-overlay.visible { opacity: 1; }
 			.dm-onboard-card {
-				background: #1a1a2e; border: 1px solid rgba(148,163,184,0.15);
+				background: #0d0d0d; border: 1px solid rgba(148,163,184,0.1);
 				border-radius: 20px; width: 500px; max-width: 90vw;
-				box-shadow: 0 25px 80px rgba(0,0,0,0.5);
+				box-shadow: 0 25px 80px rgba(0,0,0,0.6);
 				overflow: hidden; transform: translateY(20px) scale(0.95);
 				transition: transform 0.3s ease;
 			}
@@ -98,50 +83,52 @@ export class DarkMatterOnboarding extends Disposable implements IOnboardingServi
 			}
 			@keyframes dm-ob-float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
 			.dm-onboard-logo {
-				width: 72px; height: 72px; border-radius: 18px; margin: 0 auto 20px;
-				background: rgba(148,163,184,0.08); border: 1px solid rgba(148,163,184,0.15);
+				width: 80px; height: 80px; border-radius: 20px; margin: 0 auto 20px;
+				background: rgba(255,255,255,0.03); border: 1px solid rgba(148,163,184,0.15);
 				display: flex; align-items: center; justify-content: center;
-				font-size: 24px; font-weight: 800; color: #cbd5e1; letter-spacing: 2px;
+				font-size: 28px; font-weight: 800; color: #cbd5e1; letter-spacing: 3px;
 				animation: dm-ob-float 3s ease-in-out infinite;
-				box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+				box-shadow: 0 8px 32px rgba(148,163,184,0.15);
 				overflow: hidden;
 			}
 			.dm-onboard-logo img {
-				width: 100%; height: 100%; object-fit: cover; border-radius: 18px;
+				width: 100%; height: 100%; object-fit: cover; border-radius: 20px;
 			}
 			.dm-onboard-title {
-				font-size: 24px; font-weight: 700; color: #f1f5f9; margin: 0 0 8px;
+				font-size: 28px; font-weight: 700; margin: 0 0 8px; letter-spacing: -0.5px;
+				background: linear-gradient(135deg, #f8fafc 0%, #cbd5e1 50%, #94a3b8 100%);
+				-webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
 			}
 			.dm-onboard-subtitle {
-				font-size: 14px; color: #94a3b8; margin: 0 0 4px; line-height: 1.5;
+				font-size: 14px; color: #6b7280; margin: 0 0 4px; line-height: 1.5;
 			}
 			.dm-onboard-body { padding: 24px 40px; }
 			.dm-onboard-label {
-				font-size: 12px; font-weight: 600; color: #94a3b8; text-transform: uppercase;
+				font-size: 12px; font-weight: 600; color: #6b7280; text-transform: uppercase;
 				letter-spacing: 1px; margin-bottom: 8px;
 			}
 			.dm-onboard-input {
 				width: 100%; padding: 12px 16px; border-radius: 10px;
-				background: rgba(255,255,255,0.05); border: 1px solid rgba(148,163,184,0.2);
-				color: #f1f5f9; font-size: 14px; font-family: inherit;
+				background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+				color: #e0e0e0; font-size: 14px; font-family: inherit;
 				outline: none; transition: border-color 0.2s;
 				box-sizing: border-box;
 			}
-			.dm-onboard-input:focus { border-color: rgba(99,102,241,0.6); }
+			.dm-onboard-input:focus { border-color: rgba(148,163,184,0.4); }
 			.dm-onboard-model-list {
 				max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;
 				margin-top: 8px;
 			}
 			.dm-onboard-model-item {
 				padding: 10px 14px; border-radius: 8px; cursor: pointer;
-				background: rgba(255,255,255,0.03); border: 1px solid rgba(148,163,184,0.1);
+				background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
 				color: #d1d5db; font-size: 13px; display: flex; align-items: center;
 				justify-content: space-between; transition: all 0.15s;
 			}
-			.dm-onboard-model-item:hover { background: rgba(99,102,241,0.1); border-color: rgba(99,102,241,0.3); }
-			.dm-onboard-model-item.selected { background: rgba(99,102,241,0.15); border-color: rgba(99,102,241,0.4); color: #f1f5f9; }
-			.dm-onboard-model-size { font-size: 11px; color: #6b7280; }
-			.dm-onboard-status { padding: 8px 0; font-size: 13px; color: #94a3b8; text-align: center; }
+			.dm-onboard-model-item:hover { background: rgba(148,163,184,0.1); border-color: rgba(148,163,184,0.25); }
+			.dm-onboard-model-item.selected { background: rgba(148,163,184,0.12); border-color: rgba(148,163,184,0.35); color: #f1f5f9; }
+			.dm-onboard-model-size { font-size: 11px; color: #4b5563; }
+			.dm-onboard-status { padding: 8px 0; font-size: 13px; color: #6b7280; text-align: center; }
 			.dm-onboard-status.error { color: #f87171; }
 			.dm-onboard-status.success { color: #34d399; }
 			.dm-onboard-footer {
@@ -152,16 +139,17 @@ export class DarkMatterOnboarding extends Disposable implements IOnboardingServi
 				cursor: pointer; transition: all 0.2s; font-family: inherit; border: none;
 			}
 			.dm-onboard-btn-primary {
-				background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white;
+				background: rgba(148,163,184,0.15); color: #f3f4f6;
+				border: 1px solid rgba(148,163,184,0.25);
 			}
-			.dm-onboard-btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 15px rgba(99,102,241,0.4); }
-			.dm-onboard-btn-primary:disabled { opacity: 0.5; cursor: default; transform: none; box-shadow: none; }
+			.dm-onboard-btn-primary:hover { background: rgba(148,163,184,0.25); transform: translateY(-1px); }
+			.dm-onboard-btn-primary:disabled { opacity: 0.4; cursor: default; transform: none; }
 			.dm-onboard-btn-ghost {
-				background: transparent; color: #6b7280; border: 1px solid rgba(148,163,184,0.15);
+				background: transparent; color: #4b5563; border: 1px solid rgba(255,255,255,0.06);
 			}
-			.dm-onboard-btn-ghost:hover { color: #d1d5db; border-color: rgba(148,163,184,0.3); }
+			.dm-onboard-btn-ghost:hover { color: #d1d5db; border-color: rgba(255,255,255,0.12); }
 			.dm-onboard-privacy {
-				padding: 0 40px 20px; font-size: 11px; color: #4b5563; text-align: center; line-height: 1.5;
+				padding: 0 40px 24px; font-size: 11px; color: #374151; text-align: center; line-height: 1.5;
 			}
 		`;
 
@@ -429,9 +417,9 @@ export class DarkMatterOnboarding extends Disposable implements IOnboardingServi
 	}
 
 	private _renderLogo(container: HTMLElement): void {
-		if (this.logoBase64) {
+		if (this.logoUrl) {
 			const img = document.createElement('img');
-			img.src = `data:image/png;base64,${this.logoBase64}`;
+			img.src = this.logoUrl;
 			img.alt = 'Dark Matter';
 			container.appendChild(img);
 		} else {
