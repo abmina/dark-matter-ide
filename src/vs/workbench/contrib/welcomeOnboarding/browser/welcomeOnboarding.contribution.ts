@@ -52,11 +52,13 @@ class DarkMatterOnboardingTrigger extends Disposable implements IWorkbenchContri
 	}
 }
 
+/*
 registerWorkbenchContribution2(
 	DarkMatterOnboardingTrigger.ID,
 	DarkMatterOnboardingTrigger,
 	WorkbenchPhase.AfterRestored
 );
+*/
 
 // ── Command palette action ────────────────────────────────────────────
 registerAction2(class extends Action2 {
