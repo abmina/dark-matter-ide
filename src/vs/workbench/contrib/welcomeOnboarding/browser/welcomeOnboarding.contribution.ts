@@ -10,8 +10,7 @@ import { InstantiationType, registerSingleton } from '../../../../platform/insta
 import { ServicesAccessor } from '../../../../platform/instantiation/common/instantiation.js';
 import { IOnboardingService } from '../common/onboardingService.js';
 import { DarkMatterOnboarding } from './darkMatterOnboarding.js';
-import { IWorkbenchContribution, registerWorkbenchContribution2 } from '../../../common/contributions.js';
-import { WorkbenchPhase } from '../../../services/lifecycle/browser/workbenchLifecycleService.js';
+import { IWorkbenchContribution, registerWorkbenchContribution2, WorkbenchPhase } from '../../../common/contributions.js';
 import { Disposable } from '../../../../base/common/lifecycle.js';
 import { IStorageService, StorageScope } from '../../../../platform/storage/common/storage.js';
 import { ONBOARDING_STORAGE_KEY } from '../common/onboardingTypes.js';
