@@ -61,17 +61,23 @@ export class DarkMatterOnboarding extends Disposable implements IOnboardingServi
 			}
 		}
 
-		const container = this.layoutService.activeContainer;
+		this.logService.info('[Dark Matter Onboarding] show() called');
+		const container = this.layoutService.activeContainer || getActiveWindow().document.body;
+		if (!container) {
+			this.logService.error('[Dark Matter Onboarding] No container found for onboarding!');
+			return;
+		}
 
 		// Inject styles — colors matched to welcome screen (#0d0d0d, slate palette)
 		const style = document.createElement('style');
 		style.textContent = `
 			.dm-onboard-overlay {
-				position: absolute; inset: 0; z-index: 10000;
+				position: absolute; inset: 0; z-index: 10001;
 				display: flex; align-items: center; justify-content: center;
 				background: rgba(0,0,0,0.75); backdrop-filter: blur(12px);
 				opacity: 0; transition: opacity 0.3s ease;
 				font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+				pointer-events: auto;
 			}
 			.dm-onboard-overlay.visible { opacity: 1; }
 			.dm-onboard-card {
@@ -81,6 +87,7 @@ export class DarkMatterOnboarding extends Disposable implements IOnboardingServi
 				box-shadow: 0 25px 80px rgba(0,0,0,0.6);
 				transform: translateY(20px) scale(0.95);
 				transition: transform 0.3s ease;
+				pointer-events: auto;
 			}
 			.dm-onboard-overlay.visible .dm-onboard-card { transform: translateY(0) scale(1); }
 			.dm-onboard-header {
@@ -183,9 +190,12 @@ export class DarkMatterOnboarding extends Disposable implements IOnboardingServi
 		}));
 
 		// Entrance animation
-		getActiveWindow().requestAnimationFrame(() => {
-			this.overlay?.classList.add('visible');
-		});
+		setTimeout(() => {
+			if (this.overlay) {
+				this.overlay.classList.add('visible');
+				this.logService.info('[Dark Matter Onboarding] Transitioned to visible');
+			}
+		}, 50);
 	}
 
 	private _dismiss(): void {
@@ -202,6 +212,7 @@ export class DarkMatterOnboarding extends Disposable implements IOnboardingServi
 
 	private _renderStep(): void {
 		if (!this.card) { return; }
+		this.logService.info(`[Dark Matter Onboarding] Rendering step ${this.currentStep}`);
 		clearNode(this.card);
 
 		switch (this.currentStep) {

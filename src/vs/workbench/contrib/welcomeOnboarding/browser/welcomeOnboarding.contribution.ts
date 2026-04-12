@@ -15,6 +15,8 @@ import { Disposable } from '../../../../base/common/lifecycle.js';
 import { IStorageService, StorageScope } from '../../../../platform/storage/common/storage.js';
 import { ONBOARDING_STORAGE_KEY } from '../common/onboardingTypes.js';
 
+import { ILifecycleService, LifecyclePhase } from '../../../services/lifecycle/common/lifecycle.js';
+
 registerSingleton(IOnboardingService, DarkMatterOnboarding, InstantiationType.Delayed);
 
 // ── Auto-show onboarding on first launch ──────────────────────────────
@@ -24,15 +26,16 @@ class DarkMatterOnboardingTrigger extends Disposable implements IWorkbenchContri
 	constructor(
 		@IOnboardingService private readonly onboardingService: IOnboardingService,
 		@IStorageService private readonly storageService: IStorageService,
+		@ILifecycleService private readonly lifecycleService: ILifecycleService,
 	) {
 		super();
 
 		// Only show on first launch (not yet dismissed)
 		if (!this.storageService.get(ONBOARDING_STORAGE_KEY, StorageScope.PROFILE)) {
-			// Small delay to let the workbench fully render
-			setTimeout(() => {
+			// Wait until the workbench is fully stable
+			this.lifecycleService.when(LifecyclePhase.Eventually).then(() => {
 				this.onboardingService.show();
-			}, 500);
+			});
 		}
 	}
 }
