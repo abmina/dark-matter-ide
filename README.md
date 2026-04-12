@@ -19,6 +19,20 @@ Dark Matter ships with a **fully integrated Ollama chat agent** — no extension
 - **Any model** — use Gemma, Llama, Mistral, CodeLlama, DeepSeek, or any Ollama-compatible model
 - **100% private** — all AI processing runs locally on your hardware
 - **Workspace-aware** — the AI agent understands your project structure and files
+- **Remote server support** — connect to an Ollama instance running on any machine in your network
+
+### 🌐 Remote Ollama Server
+Don't want to run AI models on your local machine? Dark Matter can connect to a **remote Ollama server** — perfect for teams sharing a powerful GPU server, or offloading inference to a dedicated machine.
+
+To configure a remote server, go to **Settings** and update:
+
+```json
+{
+  "ollamaAgent.baseUrl": "http://your-server-ip:11434"
+}
+```
+
+This lets you run Ollama on a beefy workstation or cloud GPU while coding on a lightweight laptop.
 
 ### 🎨 Modern Dark Theme
 A sleek, sophisticated dark interface with a custom-designed look that's easy on the eyes during long coding sessions.
