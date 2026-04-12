@@ -1,6 +1,6 @@
 /*---------------------------------------------------------------------------------------------
- *  Dark Matter - Ollama Status Bar Entry
- *  Adds an AI settings button to the status bar for quick server/model configuration.
+ *  Copyright (c) Dark Matter IDE Contributors. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
 import { Disposable } from '../../../../../base/common/lifecycle.js';

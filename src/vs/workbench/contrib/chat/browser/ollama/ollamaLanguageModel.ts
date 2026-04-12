@@ -1,6 +1,6 @@
 /*---------------------------------------------------------------------------------------------
- *  Dark Matter - Local Ollama Language Model Provider
- *  Registers a language model that talks to a local Ollama server.
+ *  Copyright (c) Dark Matter IDE Contributors. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
 import { CancellationToken } from '../../../../../base/common/cancellation.js';

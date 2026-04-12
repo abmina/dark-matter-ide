@@ -1,7 +1,6 @@
 /*---------------------------------------------------------------------------------------------
- *  Dark Matter - Welcome & Setup Page
- *  Shows a branded welcome page on startup. If the Ollama server is not configured,
- *  launches a setup wizard to guide the user through initial configuration.
+ *  Copyright (c) Dark Matter IDE Contributors. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
 import { Disposable } from '../../../../../base/common/lifecycle.js';
