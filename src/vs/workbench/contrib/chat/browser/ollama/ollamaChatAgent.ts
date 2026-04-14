@@ -59,11 +59,11 @@ const SOURCE_EXTENSIONS = new Set([
 ]);
 
 /** Max depth for recursive scanning */
-const MAX_SCAN_DEPTH = 8;
-/** Max individual file size to read (100KB) */
-const MAX_FILE_SIZE = 100 * 1024;
-/** Max total source content to collect (1MB) — keeps context within model limits */
-const MAX_TOTAL_SOURCE_SIZE = 1024 * 1024;
+const MAX_SCAN_DEPTH = 16;
+/** Max individual file size to read (500KB) */
+const MAX_FILE_SIZE = 500 * 1024;
+/** Max total source content to collect (10MB) — keeps context within model limits */
+const MAX_TOTAL_SOURCE_SIZE = 10 * 1024 * 1024;
 
 export class OllamaChatAgent extends Disposable {
 

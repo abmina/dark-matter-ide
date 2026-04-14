@@ -18,6 +18,9 @@ export interface OllamaChatRequest {
 	model: string;
 	messages: OllamaChatMessage[];
 	stream: boolean;
+	options?: {
+		num_ctx?: number;
+	};
 }
 
 export interface OllamaChatResponseChunk {
@@ -99,6 +102,9 @@ export class OllamaLanguageModelProvider extends Disposable {
 			model: activeModel,
 			messages,
 			stream: true,
+			options: {
+				num_ctx: 262144 // 256k context window
+			}
 		};
 
 		this.logService.info(`[Ollama] Sending chat request to ${url} with model ${activeModel}`);
