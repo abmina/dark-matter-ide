@@ -62,8 +62,8 @@ const SOURCE_EXTENSIONS = new Set([
 const MAX_SCAN_DEPTH = 16;
 /** Max individual file size to read (500KB) */
 const MAX_FILE_SIZE = 500 * 1024;
-/** Max total source content to collect (10MB) — keeps context within model limits */
-const MAX_TOTAL_SOURCE_SIZE = 10 * 1024 * 1024;
+/** Max total source content to collect (1.5MB) — matches 265k token context window */
+const MAX_TOTAL_SOURCE_SIZE = 1.5 * 1024 * 1024;
 
 export class OllamaChatAgent extends Disposable {
 
