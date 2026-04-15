@@ -47,6 +47,13 @@ Registry.as<IConfigurationRegistry>(ConfigurationExtensions.Configuration).regis
 			default: 'llama3.1',
 			description: 'The Ollama model to use for chat. Run "ollama list" to see available models.',
 		},
+		'ollamaAgent.maxContextWindow': {
+			type: 'number',
+			default: 131072,
+			minimum: 2048,
+			maximum: 262144,
+			description: 'The maximum context window size (in tokens) to request from Ollama. Higher values allow the AI to remember more but consume significant GPU VRAM (e.g., 256k can require 16GB+ of VRAM).',
+		},
 	},
 });
 

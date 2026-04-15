@@ -138,8 +138,9 @@ export class OllamaLanguageModelProvider extends Disposable {
 
 		const url = `${this.baseUrl}/api/chat`;
 
-		// Dark Matter target context is 256k, but we cap it to the model's native limit if known
-		const targetCtx = 262144;
+		// Dark Matter targets a large context window, but we now respect a user-configurable limit
+		// to prevent VRAM pressure and offloading to system RAM.
+		const targetCtx = this.configurationService.getValue<number>('ollamaAgent.maxContextWindow') || 131072;
 		const nativeLimit = await this.getModelContextLimit(activeModel);
 		const finalCtx = nativeLimit ? Math.min(targetCtx, nativeLimit) : targetCtx;
 
