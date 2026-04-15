@@ -17,25 +17,34 @@ Dark Matter includes a fully integrated Ollama chat agent. Users can install [Ol
 
 *   **Zero Configuration**: Works out of the box with local Ollama instances.
 *   **Model Flexibility**: Compatible with Gemma, Llama, Mistral, CodeLlama, DeepSeek, and other Ollama models.
-*   **Privacy-Focused**: All AI processing occurs locally on the user's hardware.
+*   **100% Private**: All AI processing occurs locally on the user's hardware.
 *   **Workspace Awareness**: The AI agent understands the project structure and local file contents.
 *   **Remote Server Support**: Capability to connect to an Ollama instance running on any machine within the network.
 
-### Performance and Hardware Scalability
-Dark Matter is optimized for high-performance AI inference on consumer and enterprise hardware. It features intelligent context management to maximize efficiency:
-
-*   **Dynamic Context Balancing**: The IDE automatically calculates the optimal context window (num_ctx) based on the selected model size and available GPU VRAM. This prevents system crashes and ensures peak performance even on hardware with limited memory.
-*   **Project Digest System**: For large-scale codebases, Dark Matter utilizes a "Digest" engine that processes the workspace in segments, building a high-level architectural map. This allows the AI to maintain professional-grade awareness of the entire project without exceeding memory limits.
+### High-Context Awareness
+Dark Matter is configured to request a **256k token context window** by default. This allows the AI to maintain professional-grade awareness of large files and complex project structures during chat sessions.
 
 ### Extension Marketplace
 Full access to the [Open VSX Registry](https://open-vsx.org/), allowing users to install thousands of extensions for language support, themes, debugging, and productivity.
 
 ### Core Development Features
-Dark Matter retains all standard features of the VS Code ecosystem, including:
-*   IntelliSense and smart code completion.
-*   Integrated terminal environment.
-*   Comprehensive Git and source control integration.
-*   Advanced debugging tools for multiple languages.
+Dark Matter retains all standard features of the VS Code ecosystem, including IntelliSense, an integrated terminal, Git support, and advanced debugging.
+
+---
+
+## Hardware Requirements
+
+> [!IMPORTANT]
+> **GPU Memory (VRAM) Warning**
+>
+> Dark Matter requests a very large context window (256,000 tokens) to ensure the AI understands your entire project. This requires significant GPU VRAM.
+>
+> **Users must ensure their hardware has enough total VRAM to accommodate both the Model and the Context Window.**
+>
+> *   **Model Size**: A 7B-9B model typically requires ~5-8GB of VRAM.
+> *   **Context Overhead**: A 256k context window can add an additional **4GB to 8GB** of VRAM overhead depending on the model architecture.
+>
+> If you experience "100% CPU usage" or slow responses, it usually means Ollama has run out of GPU memory and is falling back to the CPU. In this case, consider using a smaller model or reducing the `num_ctx` manually in the source.
 
 ---
 
@@ -48,7 +57,7 @@ Dark Matter retains all standard features of the VS Code ecosystem, including:
 ### Installation and Setup
 ```bash
 # Install Ollama and pull a recommended model
-ollama pull gemma2:27b
+ollama pull gemma2:9b
 ```
 
 ### Building from Source
@@ -81,8 +90,7 @@ Dark Matter extends VS Code OSS with the following components:
 |-----------|-------------|
 | **Ollama Chat Agent** | Integrated chat participant managing local AI communication. |
 | **Language Model Provider** | Registers Ollama models as first-class providers within the IDE. |
-| **Hardware-Aware Context** | Dynamic memory management system for local LLM inference. |
-| **Project Digest Engine** | Chunked project analysis system for large-scale knowledge management. |
+| **Large Context Integration** | Pre-configured 256k context awareness for deep project understanding. |
 | **Custom Welcome UI** | Professional startup experience tailored for AI-driven development. |
 
 ---
