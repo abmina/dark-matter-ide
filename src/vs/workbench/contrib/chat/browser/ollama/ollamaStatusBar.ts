@@ -14,6 +14,7 @@ import { localize2 } from '../../../../../nls.js';
 import { OllamaLanguageModelProvider } from './ollamaLanguageModel.js';
 
 const CONFIGURE_OLLAMA_CMD = 'workbench.action.configureOllama';
+const CREATE_DIGEST_CMD = 'workbench.action.createProjectDigest';
 
 /**
  * Command that opens the Ollama quick-pick configuration dialog.
@@ -56,6 +57,11 @@ class ConfigureOllamaAction extends Action2 {
 				id: 'test',
 				label: '$(debug-start) Test Connection',
 				detail: 'Verify the Ollama server is reachable',
+			},
+			{
+				id: 'digest',
+				label: '$(book) Digest Project',
+				detail: 'Create a permanent global knowledge map of the entire workspace',
 			},
 		];
 
@@ -161,12 +167,56 @@ class ConfigureOllamaAction extends Action2 {
 					{ title: 'Connection Failed' }
 				);
 			}
+		} else if (picked.id === 'digest') {
+			accessor.get(ILogService).info('[Dark Matter] Triggering digest from UI');
+			const commandService = accessor.get('ICommandService' as any); // dynamic retrieval
+			(commandService as any).executeCommand(CREATE_DIGEST_CMD);
 		}
 	}
 }
 
-// Register the command
+class CreateProjectDigestAction extends Action2 {
+	static readonly ID = CREATE_DIGEST_CMD;
+
+	constructor() {
+		super({
+			id: CreateProjectDigestAction.ID,
+			title: localize2('createProjectDigest', "Create Project Digest"),
+			f1: true,
+			category: localize2('ai', "AI"),
+		});
+	}
+
+	override async run(accessor: ServicesAccessor): Promise<void> {
+		const logService = accessor.get(ILogService);
+		const quickInputService = accessor.get(IQuickInputService);
+
+		// We need the agent instance. It's normally registered in OllamaContribution.
+		// For simplicity in this implementation, we'll use a globally accessible event/singleton
+		// or find it via the instantiation service if we were to refactor it into a service.
+		// Since we want to ship this quickly, we'll use the 'Dark Matter' bridge.
+
+		logService.info('[Dark Matter] Starting project digest process...');
+
+		// Show a confirmation first
+		const ok = await quickInputService.pick([{ label: 'Yes, start indexing', id: 'ok' }, { label: 'Cancel', id: 'cancel' }], {
+			title: 'Create Project Digest?',
+			placeHolder: 'This will read all files in chunks and use AI to summarize them. (2-5 mins)',
+		});
+
+		if (ok?.id !== 'ok') { return; }
+
+		// Logic to trigger the digest in OllamaChatAgent
+		// Note: In a full refactor, OllamaChatAgent should be a Service.
+		// For now, we'll emit a command that the agent listens to.
+		const commandService = accessor.get('ICommandService' as any);
+		(commandService as any).executeCommand('_ollama.internal.triggerDigest');
+	}
+}
+
+// Register the commands
 registerAction2(ConfigureOllamaAction);
+registerAction2(CreateProjectDigestAction);
 
 /**
  * Status bar entry showing current AI server status with quick config access.
