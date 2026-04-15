@@ -47,16 +47,6 @@ Registry.as<IConfigurationRegistry>(ConfigurationExtensions.Configuration).regis
 			default: 'llama3.1',
 			description: 'The Ollama model to use for chat. Run "ollama list" to see available models.',
 		},
-		'ollamaAgent.gpuVramGb': {
-			type: 'number',
-			default: 8,
-			description: 'Total GPU VRAM available (in GB). Used to auto-calculate the optimal context window.',
-		},
-		'ollamaAgent.autoContext': {
-			type: 'boolean',
-			default: true,
-			description: 'Automatically calculate the optimal context window based on GPU VRAM and model size.',
-		},
 	},
 });
 

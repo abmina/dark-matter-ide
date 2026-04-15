@@ -62,45 +62,27 @@ export class OllamaLanguageModelProvider extends Disposable {
 		return this.configurationService.getValue<string>('ollamaAgent.model') || 'llama3.1';
 	}
 
-	get gpuVramGb(): number {
-		return this.configurationService.getValue<number>('ollamaAgent.gpuVramGb') || 8;
-	}
-
-	get autoContext(): boolean {
-		return this.configurationService.getValue<boolean>('ollamaAgent.autoContext') ?? true;
-	}
-
-	async getOptimalContext(modelName: string): Promise<number> {
-		if (!this.autoContext) {
-			return 8192; // safe default
-		}
-
+	async listModels(): Promise<OllamaModelInfo[]> {
 		try {
-			const models = await this.listModels();
-			const model = models.find(m => m.name === modelName || m.name.split(':')[0] === modelName);
-
-			if (!model) {
-				return 8192;
+			const response = await fetch(`${this.baseUrl}/api/tags`);
+			if (!response.ok) {
+				this.logService.error(`[Ollama] Failed to list models: ${response.status} ${response.statusText}`);
+				return [];
 			}
+			const data = await response.json();
+			return data.models || [];
+		} catch (error) {
+			this.logService.error(`[Ollama] Failed to connect to ${this.baseUrl}: ${error}`);
+			return [];
+		}
+	}
 
-			const totalVramBytes = this.gpuVramGb * 1024 * 1024 * 1024;
-			const modelSizeBytes = model.size;
-			const remainingVramBytes = totalVramBytes - modelSizeBytes;
-
-			if (remainingVramBytes <= 0) {
-				return 2048; // minimum fallback
-			}
-
-			// Conservative estimate: ~512KB per token for KV cache (FP16, 32-40 layers)
-			// This varies by model, but 512KB is a safe "average high" for 7B-30B models.
-			const bytesPerToken = 512 * 1024;
-			const calculatedContext = Math.floor(remainingVramBytes / bytesPerToken);
-
-			// Clamp between 2k and 256k
-			return Math.min(Math.max(calculatedContext, 2048), 262144);
-
+	async checkConnection(): Promise<boolean> {
+		try {
+			const response = await fetch(`${this.baseUrl}/api/tags`);
+			return response.ok;
 		} catch {
-			return 8192;
+			return false;
 		}
 	}
 
@@ -115,16 +97,13 @@ export class OllamaLanguageModelProvider extends Disposable {
 			activeModel = activeModel.substring('ollama:'.length);
 		}
 
-		const optimalCtx = await this.getOptimalContext(activeModel);
-		this.logService.info(`[Ollama] Calculated optimal context for ${activeModel} with ${this.gpuVramGb}GB VRAM: ${optimalCtx} tokens`);
-
 		const url = `${this.baseUrl}/api/chat`;
 		const body: OllamaChatRequest = {
 			model: activeModel,
 			messages,
 			stream: true,
 			options: {
-				num_ctx: optimalCtx
+				num_ctx: 262144 // 256k context window
 			}
 		};
 

@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { CancellationToken } from '../../../../../base/common/cancellation.js';
-import { VSBuffer } from '../../../../../base/common/buffer.js';
 import { MarkdownString } from '../../../../../base/common/htmlContent.js';
 import { Disposable, DisposableStore } from '../../../../../base/common/lifecycle.js';
 import { basename } from '../../../../../base/common/resources.js';
@@ -12,8 +11,6 @@ import { ExtensionIdentifier } from '../../../../../platform/extensions/common/e
 import { ILogService } from '../../../../../platform/log/common/log.js';
 import { URI } from '../../../../../base/common/uri.js';
 import { IFileService, IFileStat } from '../../../../../platform/files/common/files.js';
-import { ICommandService } from '../../../../../platform/commands/common/commands.js';
-import { IProgressService, ProgressLocation } from '../../../../../platform/progress/common/progress.js';
 import { IWorkspaceContextService } from '../../../../../platform/workspace/common/workspace.js';
 import { ChatAgentLocation, ChatModeKind } from '../../common/constants.js';
 import { IChatAgentData, IChatAgentHistoryEntry, IChatAgentImplementation, IChatAgentRequest, IChatAgentResult, IChatAgentService } from '../../common/participants/chatAgents.js';
@@ -73,7 +70,6 @@ export class OllamaChatAgent extends Disposable {
 	/** Cached workspace data */
 	private _cachedTree: string | undefined;
 	private _cachedSourceFiles: string | undefined;
-	private _cachedDigest: string | undefined;
 	private _lastScanTime = 0;
 	private readonly SCAN_INTERVAL_MS = 120_000; // rescan every 2 minutes
 
@@ -83,32 +79,15 @@ export class OllamaChatAgent extends Disposable {
 		@IFileService private readonly fileService: IFileService,
 		@IWorkspaceContextService private readonly workspaceService: IWorkspaceContextService,
 		@IEditorService private readonly editorService: IEditorService,
-		@ICommandService private readonly commandService: ICommandService,
-		@IProgressService private readonly progressService: IProgressService,
 		@ILogService private readonly logService: ILogService,
 	) {
 		super();
 		this.registerAgent();
-		this.registerCommands();
 
 		// Kick off initial workspace scan asynchronously
 		this.scanWorkspace().catch(err => {
 			this.logService.warn(`[Ollama] Initial workspace scan failed: ${err}`);
 		});
-	}
-
-	private registerCommands(): void {
-		this._register(this.commandService.registerCommand('_ollama.internal.triggerDigest', async () => {
-			await this.progressService.withProgress({
-				location: ProgressLocation.Notification,
-				title: 'Dark Matter: Creating Project Digest',
-				cancellable: true
-			}, async (progress) => {
-				await this.digestWorkspace((msg) => {
-					progress.report({ message: msg });
-				});
-			});
-		}));
 	}
 
 	private registerAgent(): void {
@@ -241,128 +220,6 @@ export class OllamaChatAgent extends Disposable {
 			`[Ollama] Scan complete: ${treeLines.length} tree entries, ` +
 			`${sourceFiles.length} source files read (${Math.round(totalSourceSize / 1024)}KB total)`
 		);
-
-		// Try to load existing digest
-		this.loadDigest().catch(() => {});
-	}
-
-	private async loadDigest(): Promise<void> {
-		const workspace = this.workspaceService.getWorkspace();
-		if (workspace.folders.length === 0) { return; }
-
-		const digestUri = URI.joinPath(workspace.folders[0].uri, '.darkmatter', 'workspace_digest.txt');
-		try {
-			const content = await this.fileService.readFile(digestUri);
-			this._cachedDigest = content.value.toString();
-			this.logService.info('[Ollama] Loaded existing workspace digest');
-		} catch {
-			this._cachedDigest = undefined;
-		}
-	}
-
-	public async digestWorkspace(progress?: (msg: string) => void): Promise<void> {
-		const workspace = this.workspaceService.getWorkspace();
-		if (workspace.folders.length === 0) { return; }
-
-		this.logService.info('[Ollama] Starting full project digest...');
-		progress?.('Gathering files for digest...');
-
-		const allFiles: { path: string; content: string }[] = [];
-		for (const folder of workspace.folders) {
-			await this.gatherAllSourceFiles(folder.uri, allFiles, 1);
-		}
-
-		if (allFiles.length === 0) {
-			this.logService.warn('[Ollama] No source files found for digest');
-			return;
-		}
-
-		this.logService.info(`[Ollama] gathered ${allFiles.length} files for chunked summarization`);
-
-		// Group into chunks of ~1MB (approx 200k-250k characters)
-		const CHUNK_SIZE_CHARS = 1024 * 1024;
-		const summaries: string[] = [];
-		let currentChunk: string[] = [];
-		let currentSize = 0;
-
-		for (const file of allFiles) {
-			const fileBlock = `\n--- FILE: ${file.path} ---\n${file.content}\n`;
-			if (currentSize + fileBlock.length > CHUNK_SIZE_CHARS && currentChunk.length > 0) {
-				// Process this chunk
-				const summary = await this.summarizeChunk(currentChunk.join('\n'), summaries.length + 1);
-				if (summary) { summaries.push(summary); }
-				currentChunk = [];
-				currentSize = 0;
-				progress?.(`Summarized ${summaries.length} chunks...`);
-			}
-			currentChunk.push(fileBlock);
-			currentSize += fileBlock.length;
-		}
-
-		if (currentChunk.length > 0) {
-			const summary = await this.summarizeChunk(currentChunk.join('\n'), summaries.length + 1);
-			if (summary) { summaries.push(summary); }
-		}
-
-		// Final synthesis
-		progress?.('Finalizing project knowledge map...');
-		const finalDigest = summaries.join('\n\n---\n\n');
-		this._cachedDigest = finalDigest;
-
-		// Save to file
-		const digestFolder = URI.joinPath(workspace.folders[0].uri, '.darkmatter');
-		const digestUri = URI.joinPath(digestFolder, 'workspace_digest.txt');
-
-		try {
-			await this.fileService.createFolder(digestFolder);
-			await this.fileService.writeFile(digestUri, VSBuffer.fromString(finalDigest));
-			this.logService.info('[Ollama] Project digest saved successfully');
-		} catch (err) {
-			this.logService.error(`[Ollama] Failed to save digest: ${err}`);
-		}
-	}
-
-	private async gatherAllSourceFiles(dir: URI, files: { path: string; content: string }[], depth: number): Promise<void> {
-		if (depth > 12) { return; } // deeper for digest
-
-		try {
-			const stat = await this.fileService.resolve(dir);
-			if (!stat.children) { return; }
-
-			for (const child of stat.children) {
-				if (child.isDirectory) {
-					if (!IGNORED_DIRS.has(child.name)) {
-						await this.gatherAllSourceFiles(child.resource, files, depth + 1);
-					}
-				} else {
-					const ext = child.name.includes('.') ? '.' + child.name.split('.').pop()!.toLowerCase() : '';
-					if (SOURCE_EXTENSIONS.has(ext)) {
-						try {
-							const content = await this.fileService.readFile(child.resource);
-							files.push({ path: child.resource.fsPath, content: content.value.toString() });
-						} catch {}
-					}
-				}
-			}
-		} catch {}
-	}
-
-	private async summarizeChunk(content: string, index: number): Promise<string | undefined> {
-		const prompt: OllamaChatMessage[] = [
-			{ role: 'system', content: 'You are a technical architect. Briefly summarize the purpose, key features, and core logic of the following code files. Be concise but descriptive.' },
-			{ role: 'user', content: `[Workspace Chunk ${index}]\n${content}` }
-		];
-
-		let result = '';
-		try {
-			for await (const chunk of this.ollamaProvider.sendChatRequest(prompt, CancellationToken.None)) {
-				result += chunk;
-			}
-			return `### Component Group ${index}\n${result}`;
-		} catch (err) {
-			this.logService.error(`[Ollama] Chunk summarization failed: ${err}`);
-			return undefined;
-		}
 	}
 
 	/**
@@ -474,13 +331,6 @@ export class OllamaChatAgent extends Disposable {
 			'=== PROJECT DIRECTORY TREE ===',
 			this._cachedTree || '(scanning...)',
 		];
-
-		if (this._cachedDigest) {
-			parts.push('');
-			parts.push('=== GLOBAL PROJECT KNOWLEDGE (DIGEST) ===');
-			parts.push('This is a high-level summary of all project components gathered via chunked processing:');
-			parts.push(this._cachedDigest);
-		}
 
 		if (this._cachedSourceFiles) {
 			parts.push('');
