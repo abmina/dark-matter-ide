@@ -8,7 +8,7 @@ import { MarkdownString } from '../../../../../base/common/htmlContent.js';
 import { Disposable, DisposableStore } from '../../../../../base/common/lifecycle.js';
 import { basename } from '../../../../../base/common/resources.js';
 import { ExtensionIdentifier } from '../../../../../platform/extensions/common/extensions.js';
-import { ILogService } from '../../../../../platform/log/common/log.js';
+import { ILogService, ILogger, ILoggerService } from '../../../../../platform/log/common/log.js';
 import { URI } from '../../../../../base/common/uri.js';
 import { IFileService, IFileStat } from '../../../../../platform/files/common/files.js';
 import { IWorkspaceContextService } from '../../../../../platform/workspace/common/workspace.js';
@@ -66,6 +66,7 @@ const MAX_FILE_SIZE = 500 * 1024;
 const MAX_TOTAL_SOURCE_SIZE = 1.5 * 1024 * 1024;
 
 export class OllamaChatAgent extends Disposable {
+	private readonly _logService: ILogger;
 
 	/** Cached workspace data */
 	private _cachedTree: string | undefined;
@@ -79,14 +80,17 @@ export class OllamaChatAgent extends Disposable {
 		@IFileService private readonly fileService: IFileService,
 		@IWorkspaceContextService private readonly workspaceService: IWorkspaceContextService,
 		@IEditorService private readonly editorService: IEditorService,
-		@ILogService private readonly logService: ILogService,
+		@ILoggerService private readonly loggerService: ILoggerService,
 	) {
 		super();
+
+		this._logService = this._register(this.loggerService.createLogger('ollama', { name: 'Dark Matter' }));
+
 		this.registerAgent();
 
 		// Kick off initial workspace scan asynchronously
 		this.scanWorkspace().catch(err => {
-			this.logService.warn(`[Ollama] Initial workspace scan failed: ${err}`);
+			this._logService.warn(`[Ollama] Initial workspace scan failed: ${err}`);
 		});
 	}
 
@@ -136,7 +140,7 @@ export class OllamaChatAgent extends Disposable {
 			disposables.add(this.chatAgentService.registerDynamicAgent(agentData, this.createImplementation()));
 		}
 
-		this.logService.info('[Dark Matter] Ollama chat agents registered for all locations');
+		this._logService.info('[Dark Matter] Ollama chat agents registered for all locations');
 	}
 
 	private createImplementation(): IChatAgentImplementation {
@@ -180,7 +184,7 @@ export class OllamaChatAgent extends Disposable {
 			return;
 		}
 
-		this.logService.info('[Ollama] Scanning workspace and reading source files...');
+		this._logService.info('[Ollama] Scanning workspace and reading source files...');
 
 		const treeLines: string[] = [];
 		const sourceFiles: { path: string; content: string }[] = [];
@@ -198,7 +202,7 @@ export class OllamaChatAgent extends Disposable {
 				}
 			} catch (err) {
 				treeLines.push(`  ⚠️ Could not scan: ${err}`);
-				this.logService.error(`[Ollama] Workspace scan error: ${err}`);
+				this._logService.error(`[Ollama] Workspace scan error: ${err}`);
 			}
 		}
 
@@ -216,7 +220,7 @@ export class OllamaChatAgent extends Disposable {
 		}
 
 		this._lastScanTime = now;
-		this.logService.info(
+		this._logService.info(
 			`[Ollama] Scan complete: ${treeLines.length} tree entries, ` +
 			`${sourceFiles.length} source files read (${Math.round(totalSourceSize / 1024)}KB total)`
 		);
@@ -407,13 +411,13 @@ export class OllamaChatAgent extends Disposable {
 		const activeModelName = selectedModel
 			? (selectedModel.startsWith('ollama:') ? selectedModel.substring('ollama:'.length) : selectedModel)
 			: this.ollamaProvider.model;
-		this.logService.info(`[Ollama] Handling request with model "${activeModelName}": "${request.message.substring(0, 100)}"`);
+		this._logService.info(`[Ollama] Handling request with model "${activeModelName}": "${request.message.substring(0, 100)}"`);
 
 		const messages: OllamaChatMessage[] = [];
 
 		// System prompt — contains FULL project tree + all source code
 		const systemPrompt = await this.buildSystemPrompt();
-		this.logService.info(`[Ollama] System prompt size: ${Math.round(systemPrompt.length / 1024)}KB`);
+		this._logService.info(`[Ollama] System prompt size: ${Math.round(systemPrompt.length / 1024)}KB`);
 		messages.push({ role: 'system', content: systemPrompt });
 
 		// Conversation history
@@ -442,7 +446,7 @@ export class OllamaChatAgent extends Disposable {
 						contextParts.push(content);
 					}
 				} catch (err) {
-					this.logService.warn(`[Ollama] Failed to resolve variable ${variable.name}: ${err}`);
+					this._logService.warn(`[Ollama] Failed to resolve variable ${variable.name}: ${err}`);
 				}
 			}
 		}
@@ -470,23 +474,94 @@ export class OllamaChatAgent extends Disposable {
 
 		try {
 			let totalLength = 0;
+			let inThought = false;
+			let currentBuffer = '';
+
 			for await (const chunk of this.ollamaProvider.sendChatRequest(messages, token, selectedModel)) {
 				if (token.isCancellationRequested) {
 					break;
 				}
 				totalLength += chunk.length;
-				progress([{
-					kind: 'markdownContent',
-					content: new MarkdownString(chunk),
-				}]);
+				currentBuffer += chunk;
+
+				// Diagnostic log for raw chunks
+				this._logService.trace(`[Ollama Agent] Received chunk: ${JSON.stringify(chunk)}`);
+
+				// Process currentBuffer for <thought> and </thought> tags.
+				// Case-insensitive and trimmed tags are more robust.
+				while (currentBuffer.length > 0) {
+					const lowerBuffer = currentBuffer.toLowerCase();
+
+					if (!inThought) {
+						const startIdx = lowerBuffer.indexOf('<thought>');
+						if (startIdx !== -1) {
+							// Content before <thought> is normal markdown
+							if (startIdx > 0) {
+								progress([{
+									kind: 'markdownContent',
+									content: new MarkdownString(currentBuffer.substring(0, startIdx)),
+								}]);
+							}
+							inThought = true;
+							this._logService.debug('[Ollama Agent] Entering <thought> mode');
+							currentBuffer = currentBuffer.substring(startIdx + '<thought>'.length);
+						} else {
+							// No start tag yet. Safely emit most of the buffer as markdown.
+							// Keep a buffer at the end to prevent splitting a tag like "<thought>"
+							const safeLength = Math.max(0, currentBuffer.length - 10);
+							if (safeLength > 0) {
+								progress([{
+									kind: 'markdownContent',
+									content: new MarkdownString(currentBuffer.substring(0, safeLength)),
+								}]);
+								currentBuffer = currentBuffer.substring(safeLength);
+							}
+							break; // Wait for more data
+						}
+					} else {
+						const endIdx = lowerBuffer.indexOf('</thought>');
+						if (endIdx !== -1) {
+							// Content before </thought> is reasoning
+							if (endIdx > 0) {
+								progress([{
+									kind: 'thinking',
+									value: currentBuffer.substring(0, endIdx),
+								}]);
+							}
+							inThought = false;
+							this._logService.debug('[Ollama Agent] Exiting <thought> mode');
+							currentBuffer = currentBuffer.substring(endIdx + '</thought>'.length);
+						} else {
+							// Still thinking. Safely emit most of it.
+							const safeLength = Math.max(0, currentBuffer.length - 11);
+							if (safeLength > 0) {
+								progress([{
+									kind: 'thinking',
+									value: currentBuffer.substring(0, safeLength),
+								}]);
+								currentBuffer = currentBuffer.substring(safeLength);
+							}
+							break; // Wait for more data
+						}
+					}
+				}
 			}
 
-			this.logService.info(`[Ollama] Request completed, response length: ${totalLength}`);
+			// Empty any remaining buffer
+			if (currentBuffer.length > 0) {
+				if (inThought) {
+					progress([{ kind: 'thinking', value: currentBuffer }]);
+				} else {
+					progress([{ kind: 'markdownContent', content: new MarkdownString(currentBuffer) }]);
+				}
+			}
+
+			this._logService.info(`[Ollama] Request completed, response length: ${totalLength}`);
 			return {};
 
 		} catch (error: unknown) {
 			const errorMessage = error instanceof Error ? error.message : String(error);
-			this.logService.error(`[Ollama] Request failed: ${errorMessage}`);
+			this._logService.error(`[Ollama] Request failed: ${errorMessage}`);
 
 			return {
 				errorDetails: {

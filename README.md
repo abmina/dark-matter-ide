@@ -21,8 +21,10 @@ Dark Matter includes a fully integrated Ollama chat agent. Users can install [Ol
 *   **Workspace Awareness**: The AI agent understands the project structure and local file contents.
 *   **Remote Server Support**: Capability to connect to an Ollama instance running on any machine within the network.
 
-### High-Context Awareness
-Dark Matter is configured to request a **256k token context window** by default. This allows the AI to maintain professional-grade awareness of large files and complex project structures during chat sessions.
+### Dynamic Context Awareness
+Dark Matter is designed for deep project understanding. By default, it targets a **256k token context window**. Upon connecting to a model, the IDE automatically queries the model's native limits and dynamically scales the context to match the maximum supported resolution of your local model (capping at 256k). 
+
+This ensures you always get the highest possible context for models like DeepSeek, Llama 3, or Command R, without exceeding their physical limits.
 
 ### Extension Marketplace
 Full access to the [Open VSX Registry](https://open-vsx.org/), allowing users to install thousands of extensions for language support, themes, debugging, and productivity.

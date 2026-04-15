@@ -7,7 +7,7 @@ import { CancellationToken } from '../../../../../base/common/cancellation.js';
 import { Emitter, Event } from '../../../../../base/common/event.js';
 import { Disposable } from '../../../../../base/common/lifecycle.js';
 import { IConfigurationService } from '../../../../../platform/configuration/common/configuration.js';
-import { ILogService } from '../../../../../platform/log/common/log.js';
+import { ILogService, ILogger, ILoggerService } from '../../../../../platform/log/common/log.js';
 
 export interface OllamaChatMessage {
 	role: 'system' | 'user' | 'assistant';
@@ -41,11 +41,17 @@ export class OllamaLanguageModelProvider extends Disposable {
 	private readonly _onDidChange = this._register(new Emitter<void>());
 	readonly onDidChange: Event<void> = this._onDidChange.event;
 
+	private readonly _modelContextLimits = new Map<string, number>();
+
+	private readonly _logService: ILogger;
+
 	constructor(
 		@IConfigurationService private readonly configurationService: IConfigurationService,
-		@ILogService private readonly logService: ILogService,
+		@ILoggerService private readonly loggerService: ILoggerService,
 	) {
 		super();
+
+		this._logService = this._register(this.loggerService.createLogger('ollama', { name: 'Dark Matter' }));
 
 		this._register(this.configurationService.onDidChangeConfiguration(e => {
 			if (e.affectsConfiguration('ollamaAgent.baseUrl') || e.affectsConfiguration('ollamaAgent.model')) {
@@ -66,13 +72,13 @@ export class OllamaLanguageModelProvider extends Disposable {
 		try {
 			const response = await fetch(`${this.baseUrl}/api/tags`);
 			if (!response.ok) {
-				this.logService.error(`[Ollama] Failed to list models: ${response.status} ${response.statusText}`);
+				this._logService.error(`[Ollama] Failed to list models: ${response.status} ${response.statusText}`);
 				return [];
 			}
 			const data = await response.json();
 			return data.models || [];
 		} catch (error) {
-			this.logService.error(`[Ollama] Failed to connect to ${this.baseUrl}: ${error}`);
+			this._logService.error(`[Ollama] Failed to connect to ${this.baseUrl}: ${error}`);
 			return [];
 		}
 	}
@@ -84,6 +90,39 @@ export class OllamaLanguageModelProvider extends Disposable {
 		} catch {
 			return false;
 		}
+	}
+
+	async getModelContextLimit(modelName: string): Promise<number | undefined> {
+		if (this._modelContextLimits.has(modelName)) {
+			return this._modelContextLimits.get(modelName);
+		}
+
+		try {
+			const response = await fetch(`${this.baseUrl}/api/show`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ name: modelName })
+			});
+
+			if (response.ok) {
+				const data = await response.json();
+				const info = data.model_info || {};
+				// Search for context length in model metadata (e.g., llama.context_length)
+				for (const key of Object.keys(info)) {
+					if (key.endsWith('.context_length')) {
+						const limit = info[key];
+						if (typeof limit === 'number') {
+							this._modelContextLimits.set(modelName, limit);
+							return limit;
+						}
+					}
+				}
+			}
+		} catch (error) {
+			this._logService.warn(`[Ollama] Failed to fetch model limits for ${modelName}: ${error}`);
+		}
+
+		return undefined;
 	}
 
 	async *sendChatRequest(
@@ -98,16 +137,22 @@ export class OllamaLanguageModelProvider extends Disposable {
 		}
 
 		const url = `${this.baseUrl}/api/chat`;
+
+		// Dark Matter target context is 256k, but we cap it to the model's native limit if known
+		const targetCtx = 262144;
+		const nativeLimit = await this.getModelContextLimit(activeModel);
+		const finalCtx = nativeLimit ? Math.min(targetCtx, nativeLimit) : targetCtx;
+
 		const body: OllamaChatRequest = {
 			model: activeModel,
 			messages,
 			stream: true,
 			options: {
-				num_ctx: 262144 // 256k context window
+				num_ctx: finalCtx
 			}
 		};
 
-		this.logService.info(`[Ollama] Sending chat request to ${url} with model ${activeModel}`);
+		this._logService.info(`[Ollama] Sending chat request to ${url} with model ${activeModel} (num_ctx: ${finalCtx}${nativeLimit ? " (capped)" : ""})`);
 
 		const abortController = new AbortController();
 		token.onCancellationRequested(() => abortController.abort());
@@ -166,7 +211,7 @@ export class OllamaLanguageModelProvider extends Disposable {
 							return;
 						}
 					} catch {
-						this.logService.warn(`[Ollama] Failed to parse chunk: ${line}`);
+						this._logService.warn(`[Ollama] Failed to parse chunk: ${line}`);
 					}
 				}
 			}
