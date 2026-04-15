@@ -44,7 +44,7 @@ Dark Matter retains all standard features of the VS Code ecosystem, including In
 > *   **Model Size**: A 7B-9B model typically requires ~5-8GB of VRAM.
 > *   **Context Overhead**: A 256k context window can add an additional **4GB to 8GB** of VRAM overhead depending on the model architecture.
 >
-> If you experience "100% CPU usage" or slow responses, it usually means Ollama has run out of GPU memory and is falling back to the CPU. In this case, consider using a smaller model or reducing the `num_ctx` manually in the source.
+> If you experience "100% CPU usage" or slow responses, it usually means Ollama has run out of GPU memory and is falling back to the CPU. In this case, consider using a smaller model or reducing project size.
 
 ---
 
