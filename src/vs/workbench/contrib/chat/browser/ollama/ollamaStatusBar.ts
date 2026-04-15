@@ -37,6 +37,7 @@ class ConfigureOllamaAction extends Action2 {
 
 		const currentUrl = configService.getValue<string>('ollamaAgent.baseUrl') || 'http://127.0.0.1:11434';
 		const currentModel = configService.getValue<string>('ollamaAgent.model') || 'llama3.1';
+		const currentContext = configService.getValue<number>('ollamaAgent.maxContextWindow') || 131072;
 
 		// Step 1: Pick what to configure
 		const options: IQuickPickItem[] = [
@@ -51,6 +52,12 @@ class ConfigureOllamaAction extends Action2 {
 				label: '$(symbol-method) Default Model',
 				description: currentModel,
 				detail: 'Select the default model for new chat sessions',
+			},
+			{
+				id: 'context',
+				label: '$(history) Context Window',
+				description: `${(currentContext / 1024).toFixed(0)}k tokens`,
+				detail: 'Adjust the maximum AI memory (impacts GPU VRAM)',
 			},
 			{
 				id: 'test',
@@ -127,6 +134,29 @@ class ConfigureOllamaAction extends Action2 {
 			if (selectedModel?.id && selectedModel.id !== currentModel) {
 				await configService.updateValue('ollamaAgent.model', selectedModel.id);
 				logService.info(`[Dark Matter] Default model updated to: ${selectedModel.id}`);
+			}
+
+		} else if (picked.id === 'context') {
+			// Context window input
+			const newContextStr = await quickInputService.input({
+				title: 'Maximum Context Window',
+				value: `${currentContext}`,
+				prompt: 'Enter the maximum number of tokens (e.g., 32768, 131072, 262144). Affects GPU VRAM usage.',
+				validateInput: async (value) => {
+					const num = parseInt(value);
+					if (isNaN(num) || num < 2048 || num > 262144) {
+						return 'Please enter a number between 2048 and 262144';
+					}
+					return undefined;
+				},
+			});
+
+			if (newContextStr) {
+				const newContext = parseInt(newContextStr);
+				if (newContext !== currentContext) {
+					await configService.updateValue('ollamaAgent.maxContextWindow', newContext);
+					logService.info(`[Dark Matter] Max context window updated to: ${newContext}`);
+				}
 			}
 
 		} else if (picked.id === 'test') {
