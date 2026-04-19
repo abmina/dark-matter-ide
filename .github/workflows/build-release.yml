@@ -61,7 +61,7 @@ jobs:
           Compress-Archive -Path "../VSCode-win32-x64/*" -DestinationPath "../DarkMatter-win32-x64.zip"
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: DarkMatter-win32-x64
           path: ../DarkMatter-win32-x64.zip
@@ -128,13 +128,13 @@ jobs:
         continue-on-error: true
 
       - name: Upload tar.gz artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: DarkMatter-linux-x64
           path: ../DarkMatter-linux-x64.tar.gz
 
       - name: Upload .deb artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: success()
         with:
           name: DarkMatter-linux-x64-deb
